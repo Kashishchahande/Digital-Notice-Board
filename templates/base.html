@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Digital Notice Board System{% endblock %}</title>
+    <!-- Modern Google Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- Top Global Header / Navigation -->
+    <header class="site-header">
+        <div class="header-container">
+            <div class="brand-group">
+                <a href="{{ url_for('index') }}" class="brand-link">
+                    <div class="brand-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                            <line x1="9" x2="15" y1="9" y2="9"/>
+                            <line x1="9" x2="15" y1="13" y2="13"/>
+                            <line x1="9" x2="11" y1="17" y2="17"/>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">Campus Bulletin</span>
+                        <span class="brand-subtitle">Digital Notice Board</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Header Center: Real-time Live Status -->
+            <div class="header-live-status">
+                <span class="live-dot"></span>
+                <span class="live-text" id="liveClock">Loading clock...</span>
+            </div>
+
+            <!-- Header Right: Navigation Links -->
+            <nav class="main-nav" id="mainNav">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span>Board</span>
+                </a>
+
+                {% if session.get('admin_logged_in') %}
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if 'admin' in request.endpoint and request.endpoint != 'admin_login' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                        <span>Admin Panel</span>
+                    </a>
+                    <a href="{{ url_for('notice_create') }}" class="btn btn-primary btn-sm nav-btn">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Post Notice</span>
+                    </a>
+                    <div class="user-badge">
+                        <span class="user-avatar">{{ session.get('admin_name', 'Admin')[0] }}</span>
+                        <span class="user-name">{{ session.get('admin_name', 'Admin') }}</span>
+                    </div>
+                    <a href="{{ url_for('admin_logout') }}" class="nav-link nav-link-logout" title="Sign Out">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <span>Sign Out</span>
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('admin_login') }}" class="nav-link nav-link-admin {% if request.endpoint == 'admin_login' %}active{% endif %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>Admin Login</span>
+                    </a>
+                {% endif %}
+            </nav>
+
+            <!-- Mobile Hamburger Toggle -->
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Flash Notifications -->
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        <div class="alert-icon">
+                            {% if category == 'success' %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            {% elif category == 'danger' %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            {% elif category == 'warning' %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            {% else %}
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            {% endif %}
+                        </div>
+                        <div class="alert-message">{{ message }}</div>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove()" aria-label="Close notification">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Block -->
+    <main class="main-wrapper">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Modal for Instant Notice Reading (No Full Page Reload) -->
+    <div class="notice-modal-backdrop" id="noticeModalBackdrop" onclick="closeNoticeModal(event)">
+        <div class="notice-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="notice-modal-header">
+                <div class="modal-meta" id="modalMeta">
+                    <span class="badge" id="modalCategoryBadge">Category</span>
+                    <span class="badge" id="modalPriorityBadge">Priority</span>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeNoticeModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="notice-modal-body">
+                <h2 class="modal-title" id="modalTitle">Notice Title</h2>
+                <div class="modal-dept-row">
+                    <span class="dept-label">Issued By:</span>
+                    <strong id="modalPostedBy">Authority</strong>
+                    <span class="dept-sep">•</span>
+                    <span class="date-label" id="modalCreatedAt">Date</span>
+                </div>
+                <div class="modal-content-text" id="modalContent">
+                    Notice full text goes here...
+                </div>
+                <div class="modal-extra-info" id="modalExtraInfo">
+                    <!-- Dynamic expiry date or views count -->
+                </div>
+            </div>
+            <div class="notice-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeNoticeModal()">Close</button>
+                <button type="button" class="btn btn-outline" id="modalPrintBtn" onclick="printModalNotice()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                    Print Notice
+                </button>
+                <a href="#" class="btn btn-primary" id="modalPermLink">Open Full Page</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <div class="footer-brand">Digital Notice Board System</div>
+                <p class="footer-desc">
+                    Centralized electronic publication & communication portal for college academic departments, examination cell, training & placement, and administration.
+                </p>
+            </div>
+            <div class="footer-right">
+                <div class="footer-links">
+                    <a href="{{ url_for('index') }}">All Notices</a>
+                    <a href="{{ url_for('index', category='Examination') }}">Exams</a>
+                    <a href="{{ url_for('index', category='Placement') }}">Placements</a>
+                    <a href="{{ url_for('index', sort='priority') }}">Urgent Alerts</a>
+                    {% if session.get('admin_logged_in') %}
+                        <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+                    {% else %}
+                        <a href="{{ url_for('admin_login') }}">Admin Login</a>
+                    {% endif %}
+                </div>
+                <div class="footer-copy">
+                    &copy; 2026 Campus Digital Notice Board System. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
