@@ -5,10 +5,16 @@ Uses Python's built-in sqlite3 module with lightweight helper functions.
 
 import os
 import sqlite3
+import tempfile
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "notice_board.db")
+# On Vercel / serverless platforms, root directory is read-only; use /tmp for SQLite writes
+if os.environ.get("VERCEL"):
+    DB_PATH = os.path.join(tempfile.gettempdir(), "notice_board.db")
+else:
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "notice_board.db")
+
 
 
 def get_db_connection():
@@ -342,3 +348,4 @@ def authenticate_admin(username, password):
             "role": admin["role"]
         }
     return None
+
